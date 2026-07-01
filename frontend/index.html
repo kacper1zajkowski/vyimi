@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vyimi OCR</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 16px; }
+    pre { background: #f4f4f4; padding: 12px; border-radius: 6px; white-space: pre-wrap; }
+    button { padding: 8px 16px; cursor: pointer; }
+    .err { color: #b00; }
+  </style>
+</head>
+<body>
+  <h1>vyimi — OCR</h1>
+
+  <form id="form">
+    <input type="file" id="file" accept=".jpg,.jpeg,.png,.pdf" required>
+    <button type="submit">Wyślij do OCR</button>
+  </form>
+
+  <p id="status"></p>
+  <pre id="result"></pre>
+
+  <script>
+    // provider container port
+    const BACKEND = "http://localhost:8000";
+
+    const form = document.getElementById("form");
+    const statusEl = document.getElementById("status");
+    const resultEl = document.getElementById("result");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const file = document.getElementById("file").files[0];
+      if (!file) return;
+
+      statusEl.className = "";
+      resultEl.textContent = "";
+
+      const data = new FormData();
+      data.append("file", file);
+
+      try {
+        const resp = await fetch(`${BACKEND}/ocr`, { method: "POST", body: data });
+        const json = await resp.json();
+        if (!resp.ok) throw new Error(json.detail || resp.statusText);
+
+        statusEl.textContent = `Gotowe: ${json.filename} (${json.pages.length} stron)`;
+        resultEl.textContent = json.pages
+          .map((p) => `=== Strona ${p.index} ===\n${p.markdown}`)
+          .join("\n\n");
+      } catch (err) {
+        statusEl.textContent = err.message;
+        statusEl.className = "err";
+      }
+    });
+  </script>
+</body>
+</html>
